@@ -1,0 +1,22 @@
+{
+  "name": "Tweak-Master",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "TweakMaster": {
+        "$ignoreUnknownInstances": true,
+        "$path": "src/TweakMaster"
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Testing": {
+          "$path": "src/Test"
+        }
+      }
+    }
+
+  }
+}
