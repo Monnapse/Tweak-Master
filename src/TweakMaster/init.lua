@@ -73,7 +73,7 @@ local function SetProperty(Activator: Frame, Type: Types.TYPE, Value: boolean | 
 		Activator.Value.Text = Value
 	end
 end
-local function ActivateProperty(Property: Frame, Type: Types.TYPE, ConnectedSignal: Signal.signal, MainFrame: Frame)
+local function ActivateProperty(self, Name, Property: Frame, Type: Types.TYPE, ConnectedSignal: Signal.signal, MainFrame: Frame)
 	local activator: GuiButton = GetPropertyValueInstance(Property, Type)
 	
 	if Type.type == "Boolean" then
@@ -82,6 +82,7 @@ local function ActivateProperty(Property: Frame, Type: Types.TYPE, ConnectedSign
 		activator.MouseButton1Click:Connect(function()
 			Enabled = not Enabled
 			SetProperty(activator,Type, Enabled)
+			self.ConnectedProperties[Name].value = Enabled
 			ConnectedSignal:Fire(Enabled)
 		end)
 	elseif Type.type == "Number" then
@@ -109,6 +110,7 @@ local function ActivateProperty(Property: Frame, Type: Types.TYPE, ConnectedSign
 
 		textbox:GetPropertyChangedSignal("Text"):Connect(function()
 			textbox.Text = textbox.Text:gsub("[^0-9.-]", "")
+			self.ConnectedProperties[Name].value = tonumber(textbox.Text)
 			ConnectedSignal:Fire(tonumber(textbox.Text))
 		end)
 
@@ -164,14 +166,15 @@ function TM:AddProperty(Name: string, Type: Types.TYPE, StartValue: boolean | st
 		SetProperty(GetPropertyValueInstance(object, Type), Type, StartValue)
 	end
 
-	ActivateProperty(object, Type, Connection, self.UI.MainFrame)
+	ActivateProperty(self, Name, object, Type, Connection, self.UI.MainFrame)
 	
-	table.insert(self.ConnectedProperties, {
+	self.ConnectedProperties[Name] = {
 		type = Type,
 		object = object,
 		name = Name,
 		signal = Connection,
-	})
+		value = StartValue
+	}
 
 	self.UI.MainFrame.TopBar.Right.Connections.Text = "Connected to "..#self.ConnectedProperties.." properties"
 
@@ -205,6 +208,12 @@ function TM.new(): Types.Master
 		end
 	end)
 	
+	self.UI.MainFrame.TopBar.Right.LogData.MouseButton1Click:Connect(function()
+		for i,v in pairs(self.ConnectedProperties) do
+			print(i,":", v.value)
+		end
+	end)
+
 	return self
 end
 
