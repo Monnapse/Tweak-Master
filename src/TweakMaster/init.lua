@@ -1,8 +1,12 @@
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 --[[
 	Made by Monnapse
 --]]
+
+--// Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local Mouse = Players.LocalPlayer:GetMouse()
 
 --// Folders
 local UI = script:FindFirstChild("UI")
@@ -52,8 +56,8 @@ local function SetProperty(Activator: Frame, Type: Types.TYPE, Value: boolean | 
 		Activator.Value.Text = Value
 	end
 end
-local function ActivateProperty(Property: Frame, Type: Types.TYPE, ConnectedSignal: Signal.signal)
-	local activator = GetPropertyValueInstance(Property, Type)
+local function ActivateProperty(Property: Frame, Type: Types.TYPE, ConnectedSignal: Signal.signal, MainFrame: Frame)
+	local activator: GuiButton = GetPropertyValueInstance(Property, Type)
 	
 	if Type.type == "Boolean" then
 		local Enabled = activator.CheckMark.Visible
@@ -62,6 +66,69 @@ local function ActivateProperty(Property: Frame, Type: Types.TYPE, ConnectedSign
 			Enabled = not Enabled
 			SetProperty(activator,Type, Enabled)
 			ConnectedSignal:Fire(Enabled)
+		end)
+	elseif Type.type == "Number" then
+		local Connected = false
+
+		local textbox: TextBox = activator.Value
+
+		activator.MouseEnter:Connect(function()
+			--UserInputService.MouseIconEnabled = false
+			--MainFrame.Cursor.Visible = true
+		end)
+		activator.MouseLeave:Connect(function()
+			--if not Connected then
+			--	UserInputService.MouseIconEnabled = true
+			--	MainFrame.Cursor.Visible = false
+			--end
+		end)
+		activator.MouseButton1Down:Connect(function()
+			Connected = true
+		end)
+
+		activator.MouseButton1Click:Connect(function()
+			textbox:CaptureFocus()
+		end)
+
+		textbox:GetPropertyChangedSignal("Text"):Connect(function()
+			textbox.Text = textbox.Text:gsub("[^0-9.-]", "")
+			ConnectedSignal:Fire(tonumber(textbox.Text))
+		end)
+
+		local previousPosition = Mouse.X
+
+		local Connection = UserInputService.InputChanged:Connect(function(inputObject)
+			local MouseDown = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+
+			if not MouseDown then
+				Connected = false
+				--UserInputService.MouseIconEnabled = true
+				--MainFrame.Cursor.Visible = false
+			end
+
+			if inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+				--MainFrame.Cursor.Position = UDim2.new(0,Mouse.X,0,Mouse.Y)
+
+				if MouseDown and not textbox:IsFocused() and Connected then
+					--UserInputService.MouseIconEnabled = false
+					local normal = 1
+
+					if Mouse.X - previousPosition < 0 then
+						normal = -1
+					end
+
+					previousPosition = Mouse.X
+					local value = tonumber(textbox.Text)+(0.1*normal)
+					value *= 100
+					value = math.floor(value)
+					value = value / 100
+
+					textbox.Text = value
+				else
+					--UserInputService.MouseIconEnabled = true
+					--MainFrame.Cursor.Visible = true
+				end
+			end
 		end)
 	end
 end
@@ -74,13 +141,13 @@ function TM:AddProperty(Name: string, Type: Types.TYPE, StartValue: boolean | st
 	local Connection = Signal.new()
 	local object: Frame = GetPropertyUI(Type.type)
 	object.Parent = self.UI.MainFrame.ScrollingFrame
-	object.Left.Name = Name
+	object.Left:FindFirstChild("Name").Text = Name
 	
 	if StartValue ~= nil then
 		SetProperty(GetPropertyValueInstance(object, Type), Type, StartValue)
 	end
 
-	ActivateProperty(object, Type, Connection)
+	ActivateProperty(object, Type, Connection, self.UI.MainFrame)
 	
 	table.insert(self.ConnectedProperties, {
 		type = Type,

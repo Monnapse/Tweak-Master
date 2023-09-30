@@ -9,6 +9,6 @@ BooleanChanged:Connect(function(Value: boolean)
     print(Value)
 end)
 
-NumberChanged:Connect(function(Value: boolean)
+NumberChanged:Connect(function(Value: number)
     print(Value)
 end)
