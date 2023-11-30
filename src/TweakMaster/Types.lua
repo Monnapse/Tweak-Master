@@ -18,7 +18,8 @@ export type Master = {
 }
 
 export type TYPE = {
-    type: string
+    type: string,
+    uiType: string,
 }
 
 return Types

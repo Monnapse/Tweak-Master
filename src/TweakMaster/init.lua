@@ -34,13 +34,15 @@ local Types = require(script.Types)
 local Signal = require(script.Signal)
 
 local TM = {}
+TM.__index = TM
 
 TM.Version = "0.0.1"
 
 TM.Types = {}
-TM.Types.Boolean = {type = "Boolean"}
-TM.Types.Number = {type = "Number"}
-TM.Types.Vector3 = {type = "Vector3"}
+TM.Types.Boolean = {type = "Boolean", uiType = "Boolean"}
+TM.Types.Float = {type = "Float", uiType = "Number"}
+TM.Types.Integer = {type = "Integer", uiType = "Number"}
+TM.Types.Vector3 = {type = "Vector3", uiType = "Vector3"}
 
 --[[
 	Private Functions
@@ -49,9 +51,9 @@ local function GetPropertyUI(Name: string): Frame
 	return PropertiesUI:FindFirstChild(Name):Clone()
 end
 local function GetPropertyValueInstance(Property: Frame, Type: Types.TYPE): Frame
-	if Type.type == "Boolean" then
+	if Type.uiType == "Boolean" then
 		return Property.Right.CheckBox
-	elseif Type.type == "Number" then
+	elseif Type.uiType == "Number" then
 		return Property.Right.ValueButton
 	else
 		print("Error: Could not find the value for", Type.type)
@@ -59,7 +61,7 @@ local function GetPropertyValueInstance(Property: Frame, Type: Types.TYPE): Fram
 	end
 end
 local function SetProperty(Activator: Frame, Type: Types.TYPE, Value: boolean | string | Vector3 | Vector2)
-	if Type.type == "Boolean" then
+	if Type.uiType == "Boolean" then
 		Activator.CheckMark.Visible = Value
 
 		if Value then
@@ -69,12 +71,16 @@ local function SetProperty(Activator: Frame, Type: Types.TYPE, Value: boolean | 
 			Activator.BackgroundTransparency = 1
 			Activator.UIStroke.Transparency = 0.5
 		end
-	elseif Type.type == "Number" then
+	elseif Type.uiType == "Number" then
 		Activator.Value.Text = Value
 	end
 end
 local function ActivateProperty(self, Name, Property: Frame, Type: Types.TYPE, ConnectedSignal: Signal.signal, MainFrame: Frame)
 	local activator: GuiButton = GetPropertyValueInstance(Property, Type)
+	local adder = 0.1
+	if Type.type == "Integer" then
+		adder = 1
+	end
 	
 	if Type.type == "Boolean" then
 		local Enabled = activator.CheckMark.Visible
@@ -85,7 +91,7 @@ local function ActivateProperty(self, Name, Property: Frame, Type: Types.TYPE, C
 			self.ConnectedProperties[Name].value = Enabled
 			ConnectedSignal:Fire(Enabled)
 		end)
-	elseif Type.type == "Number" then
+	elseif Type.type == "Float" or Type.type == "Integer" then
 		local Connected = false
 
 		local textbox: TextBox = activator.Value
@@ -108,11 +114,20 @@ local function ActivateProperty(self, Name, Property: Frame, Type: Types.TYPE, C
 			textbox:CaptureFocus()
 		end)
 
-		textbox:GetPropertyChangedSignal("Text"):Connect(function()
-			textbox.Text = textbox.Text:gsub("[^0-9.-]", "")
-			self.ConnectedProperties[Name].value = tonumber(textbox.Text)
-			ConnectedSignal:Fire(tonumber(textbox.Text))
-		end)
+		if Type.type == "Float" then
+			textbox:GetPropertyChangedSignal("Text"):Connect(function()
+				textbox.Text = textbox.Text:gsub("[^0-9.-]", "")
+				self.ConnectedProperties[Name].value = tonumber(textbox.Text)
+				ConnectedSignal:Fire(tonumber(textbox.Text))
+			end)
+		elseif Type.type == "Integer" then
+			textbox:GetPropertyChangedSignal("Text"):Connect(function()
+				textbox.Text = textbox.Text:gsub("[^0-9-]", "")
+				self.ConnectedProperties[Name].value = tonumber(textbox.Text)
+				ConnectedSignal:Fire(tonumber(textbox.Text))
+			end)
+		end
+		
 
 		local previousPosition = Mouse.X
 
@@ -137,7 +152,7 @@ local function ActivateProperty(self, Name, Property: Frame, Type: Types.TYPE, C
 					end
 
 					previousPosition = Mouse.X
-					local value = tonumber(textbox.Text)+(0.1*normal)
+					local value = tonumber(textbox.Text)+(adder*normal)
 					value *= 100
 					value = math.floor(value)
 					value = value / 100
@@ -151,6 +166,11 @@ local function ActivateProperty(self, Name, Property: Frame, Type: Types.TYPE, C
 		end)
 	end
 end
+local function GetTableSize(table: {})
+	local indexes = 0 
+	for i,v in pairs(table) do indexes +=1 end 
+	return indexes
+end
 
 --[[
 	Void
@@ -158,7 +178,7 @@ end
 --]]
 function TM:AddProperty(Name: string, Type: Types.TYPE, StartValue: boolean | string | Vector3 | Vector2): Signal.signal
 	local Connection = Signal.new()
-	local object: Frame = GetPropertyUI(Type.type)
+	local object: Frame = GetPropertyUI(Type.uiType)
 	object.Parent = self.UI.MainFrame.ScrollingFrame
 	object.Left:FindFirstChild("Name").Text = Name
 	
@@ -175,8 +195,8 @@ function TM:AddProperty(Name: string, Type: Types.TYPE, StartValue: boolean | st
 		signal = Connection,
 		value = StartValue
 	}
-
-	self.UI.MainFrame.TopBar.Right.Connections.Text = "Connected to "..#self.ConnectedProperties.." properties"
+	
+	self.UI.MainFrame.TopBar.Right.Connections.Text = "Connected to "..GetTableSize(self.ConnectedProperties).." properties"
 
 	return Connection
 end
@@ -188,7 +208,7 @@ end
 	F2 to reset position
 --]]
 function TM.new(): Types.Master
-	local self = TM
+	local self = setmetatable({},TM)
 	
 	self.UI = UI.TweakMaster:Clone()
 	self.ConnectedProperties = {}
