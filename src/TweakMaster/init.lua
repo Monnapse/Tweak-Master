@@ -36,7 +36,7 @@ local Signal = require(script.Signal)
 local TM = {}
 TM.__index = TM
 
-TM.Version = "0.0.1"
+TM.Version = "0.0.2"
 
 TM.Types = {}
 TM.Types.Boolean = {type = "Boolean", uiType = "Boolean"}
